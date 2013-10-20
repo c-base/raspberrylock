@@ -1,5 +1,14 @@
+Raspberry Lock
+===============
+
+The raspberry lock is a small application that runs on a Raspberry Pi with a
+PiFace shield. It reads a 4-digit user-ID and a 4-6 digit passcode from a 4x4
+matrix keypad. It then sends this data to a LDAP server to check if the
+entered user-id and passcode combination is correct. If the server answers with
+"correct", a door is opened by switching on an electric strike with a relais.
+
 Installation
-=============
+--------------
 
 Install the piface module with the Raspberry Pi configuration tool:
 ```
@@ -22,20 +31,20 @@ Now clone this repository and change into its subdirectory.
 Copy ```config.py.sample``` to ```config.py``` and change the password/binddn/pin field/group membership test for your application.
 
 How To Run It
-===============
+----------------
 
 ```
 python3 schloss.py
 ```
 
 Usage
-======
+----------------
 
 Press A, then enter your 4 digit UID code, then press A again. Now enter your 4-6 digit PIN code and hit A.
 If the code was correct, the door will open.
 
 Hardware-Setup
-================
+----------------
           +-----------------------------------------------------------------------+
           |+---------------------------------------------------------------------+|
           ||+-------------------------------------------------------------------+||
@@ -72,6 +81,6 @@ Hardware-Setup
 			      +---------------------------------------+ - (GND)
 
 Additional Reading
-====================
+--------------------
 
 * PiFace documentation: http://www.farnell.com/datasheets/1684425.pdf
