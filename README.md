@@ -70,3 +70,8 @@ Hardware-Setup
 			      |+------------------| DOOR OPENER |-----+ +7.5V DC
 			      |			  +-------------+
 			      +---------------------------------------+ - (GND)
+
+Additional Reading
+====================
+
+* PiFace documentation: http://www.farnell.com/datasheets/1684425.pdf
