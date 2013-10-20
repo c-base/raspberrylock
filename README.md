@@ -2,6 +2,7 @@ Installation
 =============
 
 Install the piface module with the Raspberry Pi configuration tool:
+```
 sudo raspi-config (then follow the menu to Advanced -> SPI)
 
 sudo apt-get install python3.2 python3.2-dev build-essential
@@ -13,16 +14,19 @@ sudo apt-get install python3-pifacedigitalios
 
 git clone http://git.jaseg.net/python-lmap.git
 cd python-lmap
-python3 setup.py develop
+python3 setup.py install
+```
 
 Now clone this repository and change into its subdirectory.
 
-Copy config.py.sample to config.py and change the password within the file.
+Copy ```config.py.sample``` to ```config.py``` and change the password/binddn/pin field/group membership test for your application.
 
 How To Run It
 ===============
 
+```
 python3 schloss.py
+```
 
 Usage
 ======
