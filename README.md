@@ -82,7 +82,8 @@ Hardware-Setup
                     +---------------------------------------+ - (GND)
 ```
 
-Additional Reading
+Additional Links
 --------------------
 
 * PiFace documentation: http://www.farnell.com/datasheets/1684425.pdf
+* The keypad that we used looks somethink like this: http://uk.farnell.com/eao/eco-16250-06/keypad-4x4-matrix-0-02a-24v-plastic/dp/1130806
