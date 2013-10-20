@@ -124,10 +124,10 @@ def open_when_correct(uid, pin):
         print('ldap says ok')
         with lock:
             pfio.digital_write(6, 1)
-            pfio.digital_write(0, 1)
+            pfio.digital_write(1, 1)
             time.sleep(10)
             pfio.digital_write(6, 0)
-            pfio.digital_write(0, 0)
+            pfio.digital_write(1, 0)
     else:
         print('wrong uid or pin')
         with lock:
