@@ -70,55 +70,39 @@ def control_loop():
     state = 0
     uid = '' 
     pin = ''
+    # Main state machine.
+    # Expects the user to enter her UID, then PIN like this:
+    # [A] 2903 [A] 123456 A
+    # The first and second 'A' presses are optional and ignored for compatibility with the replicator.
+    # The second 'A' would be mandatory for a non-4-digit UID, luckily all c-base UIDs are 4-digit, though.
     while True:
         key = q.get()
         q.task_done()
-        if state == 0:
-            if key == 'A':
-                print('Enter UID:')
-                state = 1
-                continue
-            elif key == 'C':
-                state = 0
-                uid = ''
-                pin = ''
-                continue
+        
+        if key == 'C': # Always allow the user to cancel by pressing 'C'
+            state = 0
+            uid = ''
+            pin = ''
+            continue
     
-        elif state == 1:
+        if state == 0:
             if key in NUMERIC_KEYS:
-                if len(uid) < 4:
-                    uid += key
-                # ignore if longer
-                continue
-            if key == 'C':
-                state = 0
-                uid = ''
-                pin = ''
-                continue
-            if key == 'A':
-                if len(uid) == 4:
-                    state = 2
+                uid += key
+            if (key == 'A' && len(uid) > 0) || len(uid) >= 4:
+                    state = 1
                     print('Enter PIN:')
-                    continue
 
-        elif state == 2:
+        if state == 1:
             if key in NUMERIC_KEYS:
                 pin += key
-                continue
-            elif key == 'C':
-                state = 0
-                uid = ''
-                pin = ''
-                continue 
             elif key == 'A':
-                t = Thread(target=open_when_correct, args=(uid, pin))
+                t = Thread(target=open_if_correct, args=(uid, pin))
                 t.start()
                 state = 0
                 uid = ''
                 pin = ''
-                continue
 
-def open_when_correct(uid, pin):
+def open_if_correct(uid, pin):
     print('checking ldap ...')
     if authenticate(uid, pin):
         print('ldap says ok')
