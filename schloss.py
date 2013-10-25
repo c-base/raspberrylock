@@ -76,8 +76,15 @@ def control_loop():
     # The first and second 'A' presses are optional and ignored for compatibility with the replicator.
     # The second 'A' would be mandatory for a non-4-digit UID, luckily all c-base UIDs are 4-digit, though.
     while True:
-        key = q.get()
-        q.task_done()
+        try:
+            key = q.get(timeout=10)
+            q.task_done()
+        except queue.Empty:
+            print("TIMEOUT")	
+            state = 0
+            uid = ''
+            pin = ''
+            continue
         
         if key == 'C': # Always allow the user to cancel by pressing 'C'
             state = 0
@@ -88,14 +95,14 @@ def control_loop():
         if state == 0:
             if key in NUMERIC_KEYS:
                 uid += key
-            if (key == 'A' && len(uid) > 0) || len(uid) >= 4:
+            if (key == 'A' and len(uid) > 0) or (len(uid) >= 4):
                     state = 1
                     print('Enter PIN:')
 
-        if state == 1:
+        elif state == 1:
             if key in NUMERIC_KEYS:
                 pin += key
-            elif key == 'A':
+            elif key == 'A' and len(pin) > 0:
                 t = Thread(target=open_if_correct, args=(uid, pin))
                 t.start()
                 state = 0
