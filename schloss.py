@@ -75,7 +75,7 @@ def control_loop():
         q.task_done()
         if state == 0:
             if key == 'A':
-                print('Enter UID:')
+                # print('Enter UID:')
                 state = 1
                 continue
             elif key == 'C':
@@ -98,7 +98,7 @@ def control_loop():
             if key == 'A':
                 if len(uid) == 4:
                     state = 2
-                    print('Enter PIN:')
+                    # print('Enter PIN:')
                     continue
 
         elif state == 2:
@@ -119,9 +119,9 @@ def control_loop():
                 continue
 
 def open_when_correct(uid, pin):
-    print('checking ldap ...')
+    # print('checking ldap ...')
     if authenticate(uid, pin):
-        print('ldap says ok')
+        # print('ldap says ok')
         with lock:
             pfio.digital_write(6, 1)
             pfio.digital_write(1, 1)
@@ -129,7 +129,7 @@ def open_when_correct(uid, pin):
             pfio.digital_write(6, 0)
             pfio.digital_write(1, 0)
     else:
-        print('wrong uid or pin')
+        # print('wrong uid or pin')
         with lock:
             pfio.digital_write(7, 1)
             time.sleep(2)
