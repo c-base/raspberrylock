@@ -70,6 +70,11 @@ def control_loop():
     state = 0
     uid = '' 
     pin = ''
+    # Main state machine.
+    # Expects the user to enter her UID, then PIN like this:
+    # [A] 2903 [A] 123456 A
+    # The first and second 'A' presses are optional and ignored for compatibility with the replicator.
+    # The second 'A' would be mandatory for a non-4-digit UID, luckily all c-base UIDs are 4-digit, though.
     while True:
         key = q.get()
         q.task_done()
@@ -83,8 +88,7 @@ def control_loop():
                 uid = ''
                 pin = ''
                 continue
-    
-        elif state == 1:
+        if state == 0:
             if key in NUMERIC_KEYS:
                 if len(uid) < 4:
                     uid += key
@@ -100,28 +104,19 @@ def control_loop():
                     state = 2
                     # print('Enter PIN:')
                     continue
-
-        elif state == 2:
+        elif state == 1:
             if key in NUMERIC_KEYS:
                 pin += key
-                continue
-            elif key == 'C':
-                state = 0
-                uid = ''
-                pin = ''
-                continue 
-            elif key == 'A':
-                t = Thread(target=open_when_correct, args=(uid, pin))
+            elif key == 'A' and len(pin) > 0:
+                t = Thread(target=open_if_correct, args=(uid, pin))
                 t.start()
                 state = 0
                 uid = ''
                 pin = ''
-                continue
 
-def open_when_correct(uid, pin):
-    # print('checking ldap ...')
+def open_if_correct(uid, pin):
+    print('checking ldap ...')
     if authenticate(uid, pin):
-        # print('ldap says ok')
         with lock:
             pfio.digital_write(6, 1)
             pfio.digital_write(1, 1)
@@ -129,7 +124,6 @@ def open_when_correct(uid, pin):
             pfio.digital_write(6, 0)
             pfio.digital_write(1, 0)
     else:
-        # print('wrong uid or pin')
         with lock:
             pfio.digital_write(7, 1)
             time.sleep(2)
