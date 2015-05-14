@@ -25,7 +25,6 @@ def pwcheck(record, pw):
 
 def authenticate(uid, pin):
 	lm = ldap_connect()
-	
 	try:
 		user = lm(config.LDAP.USERBASE).search(config.LDAP.ACCESS_FILTER.format(uid))[0]
 		username = user[config.LDAP.UIDFIELD]
