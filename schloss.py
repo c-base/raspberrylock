@@ -3,6 +3,7 @@
 
 import time
 # import pifacedigitalio as pfio
+from RPi import GPIO
 import queue
 from threading import Thread, RLock
 
@@ -20,8 +21,11 @@ lock = RLock()
 # ROWS = [2, 3, 4, 5]
 # COLS = [0, 1, 2, 3]
 
-ROWS = [2, 3, 4, 5]
-COLS = [0, 1, 2, 3]
+COLS = [15, 13, 11, 7]
+#COLS = [7, 11, 13, 15]
+ROWS = [12, 16, 18, 22]
+#ROWS = [22, 18, 16, 12] #12, 16, 18, 22]
+
 
 def init_piface():
     pfio.init()
@@ -35,7 +39,7 @@ def init_gpios():
     for pin in ROWS:
         GPIO.setup(pin, GPIO.OUT)
     for pin in COLS:
-        GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
 def decode_keypad(measurements):
     """
@@ -59,12 +63,16 @@ def collect_measurements():
     """
     pin_state = []
     for y_pin in ROWS:
-        pfio.digital_write(y_pin, 1)
+        # pfio.digital_write(y_pin, 1)
+        GPIO.output(y_pin, 1)
         x_pin_states = []
-        for x_pin in :
-            pin_in = pfio.digital_read(x_pin)
+        for x_pin in COLS:
+            #pin_in = pfio.digital_read(x_pin)
+            pin_in = GPIO.input(x_pin)
+            # print("{}x{} = {}".format(y_pin, x_pin, pin_in))
             x_pin_states.append(pin_in)
-        pfio.digital_write(y_pin, 0)
+        # pfio.digital_write(y_pin, 0)
+        GPIO.output(y_pin, 0)
         pin_state.append(x_pin_states)
     return pin_state
 
@@ -148,6 +156,7 @@ def keypad_loop():
         with lock:
             key = read_keypad()
             if key:
+                print("read {}".format(key))
                 q.put(key)
 
 def main():
@@ -159,4 +168,7 @@ def main():
     keypad_thread.start()
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        GPIO.cleanup()

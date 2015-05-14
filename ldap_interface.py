@@ -38,5 +38,5 @@ def authenticate(uid, pin):
 numbuf = []
 
 if __name__ == "__main__":
-	print pwcheck('{SSHA}c8pLDYbSkF2jBAKxxa67nY7NYkdQXiPNFzzRso9FRZI=', '1234')
+	print(pwcheck('{SSHA}c8pLDYbSkF2jBAKxxa67nY7NYkdQXiPNFzzRso9FRZI=', '1234'))
 
