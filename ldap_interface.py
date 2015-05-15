@@ -4,7 +4,7 @@
 import base64
 import hashlib
 from datetime import datetime
-#from lmap import *
+from lmap import *
 
 import config
 
