@@ -36,9 +36,9 @@ OPEN_PIN = 26
 # preinit to avoid sound lag
 pygame.mixer.pre_init(44100, -16, 2, 2048) # setup mixer to avoid sound lag
 pygame.mixer.init()
-beep = pygame.mixer.Sound('beep.wav')
-fail = pygame.mixer.Sound('fail.wav')
-success = pygame.mixer.Sound('success.wav')
+beep = pygame.mixer.Sound('/home/pi/raspberrylock/beep.wav')
+fail = pygame.mixer.Sound('/home/pi/raspberrylock/fail.wav')
+success = pygame.mixer.Sound('/home/pi/raspberrylock/success.wav')
 
 def init_piface():
     pfio.init()
@@ -208,7 +208,7 @@ def keypad_loop():
 
 def main():
     # pfio.init()
-    os.nice(10)
+    #os.nice(10)
     init_gpios()
     control_thread = Thread(target=control_loop)
     control_thread.start()
