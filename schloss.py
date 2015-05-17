@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import os
 import time
 # import pifacedigitalio as pfio
 from RPi import GPIO
@@ -12,7 +13,8 @@ from ldap_interface import authenticate
 
 NUMERIC_KEYS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
-BOUNCE_TIME = 300
+BOUNCE_TIME = 300 # in milliseconds
+STALE_TIMEOUT = 30 # in seconds
 timeouts = {'1': BOUNCE_TIME, '2': BOUNCE_TIME, '3': BOUNCE_TIME, '4': BOUNCE_TIME, 
             '5': BOUNCE_TIME, '6': BOUNCE_TIME, '7': BOUNCE_TIME, '8': BOUNCE_TIME,
             '9': BOUNCE_TIME, '0': BOUNCE_TIME, 'A': BOUNCE_TIME, 'B': BOUNCE_TIME, 
@@ -102,10 +104,32 @@ def read_keypad():
     else:
         return None
 
-def control_loop():
+
+state = 0
+uid = ''
+pin = ''
+reset_timer = STALE_TIMEOUT
+
+def reset_state():
+    print("reset state")
+    global state, uid, pin
     state = 0
-    uid = '' 
+    uid = ''
     pin = ''
+
+def timeout_reset_state():
+    global reset_timer
+    while True:
+        reset_timer -= 1
+        if reset_timer <= 0:
+            reset_state()
+            reset_timer = STALE_TIMEOUT
+        time.sleep(1.0)
+
+def control_loop():
+    global reset_timer
+    global state, uid, pin
+    reset_state()
     # Main state machine.
     # Expects the user to enter her UID, then PIN like this:
     # [A] 2903 [A] 123456 A
@@ -114,42 +138,47 @@ def control_loop():
     while True:
         key = q.get()
         print('state={}, got symbol {}'.format(state, '#'))
+        reset_timer = STALE_TIMEOUT
         q.task_done()
         if state == 0:
             if key == 'A':
                 # print('Enter UID:')
-                state = 1
+                state = 0
                 continue
             elif key == 'C':
-                state = 0
-                uid = ''
-                pin = ''
+                reset_state()
                 continue
-        if state == 0:
+            elif key in NUMERIC_KEYS:
+                uid += key
+                state = 1
+                continue
+        elif state == 1:
             if key in NUMERIC_KEYS:
                 if len(uid) < 4:
                     uid += key
-                # ignore if longer
-                continue
-            if key == 'C':
-                state = 0
-                uid = ''
-                pin = ''
-                continue
-            if key == 'A':
-                if len(uid) == 4:
+                    state = 1
+                else:
+                    pin += key
                     state = 2
-                    # print('Enter PIN:')
-                    continue
-        elif state == 1:
+                continue
+            elif key == 'C':
+                reset_state()
+                continue
+            elif key == 'A':
+                state = 2
+                continue
+        elif state == 2:
             if key in NUMERIC_KEYS:
                 pin += key
-            elif key == 'A' and len(pin) > 0:
+                continue
+            elif key == 'C':
+                reset_state() 
+                continue
+            elif key == 'A':
                 t = Thread(target=open_if_correct, args=(uid, pin))
                 t.start()
-                state = 0
-                uid = ''
-                pin = ''
+                reset_state()
+                continue
 
 def open_if_correct(uid, pin):
     print('checking ldap ...')
@@ -179,11 +208,14 @@ def keypad_loop():
 
 def main():
     # pfio.init()
+    os.nice(10)
     init_gpios()
     control_thread = Thread(target=control_loop)
     control_thread.start()
     keypad_thread = Thread(target=keypad_loop)
     keypad_thread.start()
+    timeout_thread = Thread(target=timeout_reset_state)
+    timeout_thread.start()
 
 if __name__ == '__main__':
     try:
