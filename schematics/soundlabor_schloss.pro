@@ -1,4 +1,4 @@
-update=Sat 12 Sep 2015 17:23:26 CEST
+update=So 10 Apr 2016 02:15:26 CEST
 version=1
 last_client=kicad
 [pcbnew]
@@ -23,9 +23,11 @@ ModuleOutlineThickness=0.150000000000
 [cvpcb]
 version=1
 NetIExt=net
+[general]
+version=1
 [eeschema]
 version=1
-LibDir=
+LibDir=raspberrylock_lib.pretty
 [eeschema/libraries]
 LibName1=power
 LibName2=device
@@ -56,5 +58,3 @@ LibName26=opto
 LibName27=atmel
 LibName28=contrib
 LibName29=valves
-[general]
-version=1
