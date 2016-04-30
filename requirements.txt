@@ -1,0 +1,3 @@
+RPi.GPIO==0.6.2
+lmap==0.0.2
+-e  git+https://github.com/jaseg/python-mpv.git#egg=python-mpv

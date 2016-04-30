@@ -1,9 +1,9 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import unittest
 
 from schloss import *
+
 
 class SchlossTest(unittest.TestCase):
     def test_decode_keypad(self):
@@ -17,3 +17,4 @@ class SchlossTest(unittest.TestCase):
         self.assertEquals(timeout_expected, result)
         result = decrease_timeouts(result)
         self.assertEquals(timeout_expected, result)
+
