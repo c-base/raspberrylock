@@ -1,18 +1,42 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+"""
+c-lab schloss
+
+Usage:
+  schloss.py --theme <theme>
+  schloss.py (-h | --help)
+  schloss.py --version
+
+Options:
+  -h --help        Show this screen.
+  --version        Show version.
+  --theme=<theme>  Sound theme.
+"""
+
+import os
+import sys
+import random
+import subprocess
 import time
 import queue
 from threading import Thread, RLock
+from glob import glob
 
-import mpv
+from docopt import docopt
 from RPi import GPIO
 from ldap_interface import authenticate
 
 
+__version__ = '0.1.0'
+
+GPIO.setwarnings(False)
+
+
 NUMERIC_KEYS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
-BOUNCE_TIME = 300  # in milliseconds
+BOUNCE_TIME = 350  # in milliseconds
 STALE_TIMEOUT = 30  # in seconds
 timeouts = {'1': BOUNCE_TIME, '2': BOUNCE_TIME, '3': BOUNCE_TIME, '4': BOUNCE_TIME,
             '5': BOUNCE_TIME, '6': BOUNCE_TIME, '7': BOUNCE_TIME, '8': BOUNCE_TIME,
@@ -23,21 +47,30 @@ timeouts = {'1': BOUNCE_TIME, '2': BOUNCE_TIME, '3': BOUNCE_TIME, '4': BOUNCE_TI
 q = queue.Queue()
 lock = RLock()
 
-COLS = [15, 13, 11, 7]
-ROWS = [12, 16, 18, 22]
+#COLS = [5, 13, 11, 7]
+#ROWS = [12, 16, 18, 22]
 
-OPEN_PIN = 26
+ROWS = [11, 7, 5, 3]
+COLS = [16, 12, 10, 8]
+
+
+OPEN_PIN = 15
 
 # preinit to avoid sound lag
-MPV = mpv.MPV()
-beep = '/opt/raspberrylock/beep.wav'
-fail = '/opt/raspberrylock/fail.wav'
-success = '/opt/raspberrylock/success.wav'
+#MPV = mpv.MPV()
+PLAYER = 'aplay'
+
+MONGO = None
 
 state = 0
 uid = ''
 pin = ''
 reset_timer = STALE_TIMEOUT
+
+def next_theme():
+    global THEME
+    themes = next(os.walk('/opt/raspberrylock/sounds/'))[1]
+    THEME = random.choice(themes)
 
 
 def init_gpios():
@@ -92,7 +125,11 @@ def read_keypad():
         if timeouts[key] > 0:
             return None
         else:
-            play(beep)
+            num = random.randint(0, 9)
+            if THEME:
+                subprocess.Popen([PLAYER, '/opt/raspberrylock/sounds/%s/%s.wav' % (THEME, num)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                subprocess.Popen([PLAYER, beep], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             timeouts[key] = BOUNCE_TIME
             return key
     else:
@@ -180,13 +217,20 @@ def control_loop():
 def open_if_correct(uid, pin):
     print('checking ldap ...')
     if authenticate(uid, pin):
-        play(success)
+        if THEME:
+            subprocess.Popen([PLAYER, '/opt/raspberrylock/sounds/%s/success.wav' % THEME], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            subprocess.Popen([PLAYER, success], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        next_theme()
         with lock:
             GPIO.output(OPEN_PIN, 1)
             time.sleep(10)
             GPIO.output(OPEN_PIN, 0)
     else:
-        play(fail)
+        if THEME:
+            subprocess.Popen([PLAYER, '/opt/raspberrylock/sounds/%s/fail.wav' % THEME], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            subprocess.Popen([PLAYER, fail], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         with lock:
             time.sleep(2)
 
@@ -211,8 +255,10 @@ def main():
 
 
 if __name__ == '__main__':
+    args = docopt(__doc__, version=__version__)
     try:
         main()
+        THEME = args['--theme']
     except KeyboardInterrupt:
         GPIO.cleanup()
 
