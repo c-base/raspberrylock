@@ -17,9 +17,9 @@ Options:
 
 import os
 import time
-import queue
 import random
 import subprocess
+from queue import Queue
 from threading import Thread, RLock
 
 from docopt import docopt
@@ -42,8 +42,8 @@ timeouts = {'1': BOUNCE_TIME, '2': BOUNCE_TIME, '3': BOUNCE_TIME, '4': BOUNCE_TI
             '9': BOUNCE_TIME, '0': BOUNCE_TIME, 'A': BOUNCE_TIME, 'B': BOUNCE_TIME,
             'C': BOUNCE_TIME, 'D': BOUNCE_TIME, 'E': BOUNCE_TIME, 'F': BOUNCE_TIME}
 
-q = queue.Queue()
-lock = RLock()
+Q = Queue()
+LOCK = RLock()
 
 ROWS = [11, 7, 5, 3]
 COLS = [16, 12, 10, 8]
@@ -55,15 +55,21 @@ PLAYER = 'aplay'
 
 MONGO = None
 
-state = 0
-uid = ''
-pin = ''
-reset_timer = STALE_TIMEOUT
+STATE = 0
+UID = ''
+PIN = ''
+RESET_TIMER = STALE_TIMEOUT
+
 
 def next_theme():
+    """
+    Look into themes folder and find all installed themes. Get a random one which is not the current one.
+    """
     global THEME
     themes = next(os.walk('/opt/raspberrylock/sounds/'))[1]
-    THEME = random.choice(themes)
+    OLD_THEME = THEME
+    while THEME != OLD_THEME:
+        THEME = random.choice(themes)
 
 
 def init_gpios():
@@ -119,7 +125,8 @@ def read_keypad():
             return None
         else:
             num = random.randint(0, 9)
-            subprocess.Popen([PLAYER, '/opt/raspberrylock/sounds/%s/%s.wav' % (THEME, num)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.Popen([PLAYER, '/opt/raspberrylock/sounds/%s/%s.wav' % (THEME, num)],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             timeouts[key] = BOUNCE_TIME
             return key
     else:
@@ -127,28 +134,28 @@ def read_keypad():
 
 
 def reset_state():
-    global state, uid, pin
+    global STATE, UID, PIN
 
     print("reset state")
-    state = 0
-    uid = ''
-    pin = ''
+    STATE = 0
+    UID = ''
+    PIN = ''
 
 
 def timeout_reset_state():
-    global reset_timer
+    global RESET_TIMER
 
     while True:
-        reset_timer -= 1
-        if reset_timer <= 0:
+        RESET_TIMER -= 1
+        if RESET_TIMER <= 0:
             reset_state()
-            reset_timer = STALE_TIMEOUT
+            RESET_TIMER = STALE_TIMEOUT
         time.sleep(1.0)
 
 
 def control_loop():
-    global reset_timer
-    global state, uid, pin
+    global RESET_TIMER
+    global STATE, UID, PIN
 
     reset_state()
 
@@ -158,46 +165,46 @@ def control_loop():
     # The first and second 'A' presses are optional and ignored for compatibility with the replicator.
     # The second 'A' would be mandatory for a non-4-digit UID, luckily all c-base UIDs are 4-digit, though.
     while True:
-        key = q.get()
-        print('state={}, got symbol {}'.format(state, '#'))
-        reset_timer = STALE_TIMEOUT
-        q.task_done()
-        if state == 0:
+        key = Q.get()
+        print('state={}, got symbol {}'.format(STATE, '#'))
+        RESET_TIMER = STALE_TIMEOUT
+        Q.task_done()
+        if STATE == 0:
             if key == 'A':
                 # print('Enter UID:')
-                state = 0
+                STATE = 0
                 continue
             elif key == 'C':
                 reset_state()
                 continue
             elif key in NUMERIC_KEYS:
-                uid += key
-                state = 1
+                UID += key
+                STATE = 1
                 continue
-        elif state == 1:
+        elif STATE == 1:
             if key in NUMERIC_KEYS:
-                if len(uid) < 4:
-                    uid += key
-                    state = 1
+                if len(UID) < 4:
+                    UID += key
+                    STATE = 1
                 else:
-                    pin += key
-                    state = 2
+                    PIN += key
+                    STATE = 2
                 continue
             elif key == 'C':
                 reset_state()
                 continue
             elif key == 'A':
-                state = 2
+                STATE = 2
                 continue
-        elif state == 2:
+        elif STATE == 2:
             if key in NUMERIC_KEYS:
-                pin += key
+                PIN += key
                 continue
             elif key == 'C':
                 reset_state()
                 continue
             elif key == 'A':
-                t = Thread(target=open_if_correct, args=(uid, pin))
+                t = Thread(target=open_if_correct, args=(UID, PIN))
                 t.start()
                 reset_state()
                 continue
@@ -207,30 +214,30 @@ def open_if_correct(uid, pin):
     print('checking ldap ...')
     if authenticate(uid, pin):
         subprocess.Popen([PLAYER, '/opt/raspberrylock/sounds/%s/success.wav' % THEME],
-			 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         next_theme()
-        with lock:
+        with LOCK:
             GPIO.output(OPEN_PIN, 1)
             time.sleep(1)
             GPIO.output(OPEN_PIN, 0)
             time.sleep(13)
     else:
         subprocess.Popen([PLAYER, '/opt/raspberrylock/sounds/%s/fail.wav' % THEME],
-			 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        with lock:
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        with LOCK:
             time.sleep(2)
 
 
 def keypad_loop():
     while True:
-        with lock:
+        with LOCK:
             key = read_keypad()
             if key:
-                q.put(key)
+                Q.put(key)
 
 
 def main():
-    #os.nice(10)
+    # os.nice(10)
     init_gpios()
     control_thread = Thread(target=control_loop)
     control_thread.start()
