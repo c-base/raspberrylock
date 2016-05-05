@@ -1,0 +1,13 @@
+[Unit]
+Description=raspberrylock
+
+[Service]
+Type=simple
+User=ffwi
+WorkingDirectory=/opt/raspberrylock/
+ExecStart=/opt/raspberrylock/schloss.py
+TimeoutSec=60
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

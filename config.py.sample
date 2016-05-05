@@ -1,12 +1,13 @@
-# -*- coding: utf-8 -*-
+# coding: utf-8
 
 class LDAP:
-    URI = 'ldap://10.0.1.7:389/'
+    # URI = 'ldap://10.0.1.7:389/'
+    URI = 'ldap://lea.cbrp3.c-base.org:389/'
     BASE = 'dc=c-base,dc=org'
     USERBASE = 'ou=crew'
     BINDDN = 'cn=c-labpin,ou=bind,dc=c-base,dc=org'
-    BINDPW = 'ENTER PWD HERE'
+    BINDPW = 'supersecret'
     PINFIELD = 'c-labPIN'
-    UIDFIELD ='uid'
-    ACCESS_FILTER ='(&(uidNumber={})(memberof=cn=cey-c-lab,ou=groups,dc=c-base,dc=org)(memberof=cn=crew,ou=groups,dc=c-base,dc=org))'
-
+    UIDFIELD = 'uid'
+    # ACCESS_FILTER = '(&(uidNumber={})(memberof=cn=cey-c-lab,ou=groups,dc=c-base,dc=org)(memberof=cn=crew,ou=groups,dc=c-base,dc=org))'
+    ACCESS_FILTER = '(&(uidNumber={})(|(memberof=cn=cey-c-lab,ou=groups,dc=c-base,dc=org)(memberof=cn=cey-schleuse,ou=groups,dc=c-base,dc=org))(memberof=cn=crew,ou=groups,dc=c-base,dc=org))'
