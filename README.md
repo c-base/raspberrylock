@@ -22,18 +22,6 @@ curl -SsL https://raw.githubusercontent.com/c-base/raspberrylock/master/install.
 Copy `/opt/c_locc/config.ini.sample` to `/opt/c_locc/config.ini` and change the config values to your
 needs.
 
-How To Run It
--------------
-
-Copy the systemd service file to `/etc/systemd/system/`. Enable and start it
-with:
-
-```
-sudp cp c_locc.service /etc/systemd/system/
-sudo systemctl enable c_locc.service
-sudo systemctl start c_locc.service
-```
-
 Usage
 -----
 
