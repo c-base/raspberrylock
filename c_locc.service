@@ -1,0 +1,14 @@
+[Unit]
+Description=c-base c_locc control software
+After=network.target
+
+[Service]
+Type=simple
+User=ffwi
+WorkingDirectory=/opt/c_locc/
+ExecStart=/opt/c_locc/main.py
+TimeoutSec=60
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

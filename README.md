@@ -1,89 +1,60 @@
-Raspberry Lock
-===============
+c_locc
+======
 
-The raspberry lock is a small application that runs on a Raspberry Pi with a
-PiFace shield. It reads a 4-digit user-ID and a 4-6 digit passcode from a 4x4
-matrix keypad. It then sends this data to a LDAP server to check if the
-entered user-id and passcode combination is correct. If the server answers with
-"correct", a door is opened by switching on an electric strike with a relais.
+The c_locc software is a small application that runs on a raspberry pi. It
+reads a 4-digit user-ID and a 4-8 digit passcode from a 4x4 matrix keypad. It
+then sends this data to a LDAP server to check if the entered user-id and
+passcode combination is correct. If the server answers with "correct", a door
+is opened by switching on an electric strike with a relais.
+
 
 Installation
---------------
+------------
 
-Install the piface module with the Raspberry Pi configuration tool:
+Use the tool `raspi-config` and activate SPI by going to Advanced -> SPI.
+
+Now you can use the `install.sh` file to setup the rest:
+
 ```
-sudo raspi-config (then follow the menu to Advanced -> SPI)
-
-sudo apt-get install python3.2 python3.2-dev build-essential
-sudo apt-get install libldap-2.4-2
-sudo ln -s /usr/lib/arm-linux-gnueabihf/libldap_r-2.4.so.2 /usr/lib/arm-linux-gnueabihf/libldap.so
-sudo ldconfig
-sudo apt-get install python3-setuptools
-sudo apt-get install python3-pifacedigitalios
-
-git clone http://git.jaseg.net/python-lmap.git
-cd python-lmap
-python3 setup.py install
+curl -SsL https://raw.githubusercontent.com/c-base/raspberrylock/master/install.sh | sudo bash
 ```
 
-Now clone this repository and change into its subdirectory.
+```
+git clone https://github.com/c-base/raspberrylock.git ; cd raspberrylock
+```
 
-Copy ```config.py.sample``` to ```config.py``` and change the password/binddn/pin field/group membership test for your application.
+Copy `config.ini.sample` to `config.ini` and change the config values to your
+needs..
 
 How To Run It
-----------------
+-------------
+
+Copy the systemd service file to `/etc/systemd/system/`. Enable and start it
+with:
 
 ```
-python3 schloss.py
+sudp cp c_locc.service /etc/systemd/system/
+sudo systemctl enable c_locc.service
+sudo systemctl start c_locc.service
 ```
 
 Usage
-----------------
+-----
 
-Press A, then enter your 4 digit UID code, then press A again. Now enter your 4-6 digit PIN code and hit A.
-If the code was correct, the door will open.
+Enter your 4 digit UID code. Now enter your 4-8 digit PIN code and hit A. If
+the code was correct, the door will open. You can also hit B instead of A
+and the door will stay permanently open. The next visitor can just press the
+button on the door knob to enter.
 
 Hardware-Setup
 ----------------
+
 ```
-+-----------------------------------------------------------------------+
-|+---------------------------------------------------------------------+|
-||+-------------------------------------------------------------------+||
-|||+-----------------------------------------------------------------+|||
-||||  +------+.................                                      ||||
-||||  |      |                :                   +---------------+  ||||
-|||+---+0    |  RASPBERRY PI  :                   |    KEYPAD     |  ||||
-||+----+1    +--------+       :                   |               |  ||||
-|+-----+2             |       :                   | 1   2   3   F |  ||||
-+------+3             |       :                   | 4   5   6   E |  ||||
-      |+4             +-------+                   | 7   8   9   D |  ||||
-      |+5                     |                   | A   0   B   C |  ||||
-      |+6                     ^                   |               |  ||||
-      |+7                     |                   |               |  ||||
-      |+0V                    +                   +---++++-++++---+  ||||
-      |                       |    to LEDs            |||| ||||      ||||
-      |                       |      ^ ^              |||| |||+------+|||
-      |        PIFACE         |   Red| |Green         |||| ||+--------+||
-      |                       |      | |              |||| |+----------+|
-      |                       |      | |              |||| +------------+
-      | ++                  7+-------+ |              ||||
-      | ||                  6+---------+              ||||
-      | ||                  5+------------------------+|||
-      | ||                  4+-------------------------+||
-      | ||  +----+ +----+   3+--------------------------+|
-      | ||  |    | |    |   2+---------------------------+
-      | ||  | R0 | | R1 |   1 |
-      | ||  |    | |    |   0 |
-      | ++  +----+ +----+ GND |
-      |   .. +++    +++  +++ :|
-      +-------------||--------+	        +-------------+
-                    |+------------------| DOOR OPENER |-----+ +7.5V DC
-                    |		            +-------------+
-                    +---------------------------------------+ - (GND)
+TODO: draw nice grafic with pins and stuff
 ```
 
 Additional Links
 --------------------
 
-* PiFace documentation: http://www.farnell.com/datasheets/1684425.pdf
-* The keypad that we used looks somethink like this: http://uk.farnell.com/eao/eco-16250-06/keypad-4x4-matrix-0-02a-24v-plastic/dp/1130806
+  - Keypad used in the project:
+    http://uk.farnell.com/eao/eco-16250-06/keypad-4x4-matrix-0-02a-24v-plastic/dp/1130806
