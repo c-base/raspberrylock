@@ -19,12 +19,8 @@ Now you can use the `install.sh` file to setup the rest:
 curl -SsL https://raw.githubusercontent.com/c-base/raspberrylock/master/install.sh | sudo bash
 ```
 
-```
-git clone https://github.com/c-base/raspberrylock.git ; cd raspberrylock
-```
-
-Copy `config.ini.sample` to `config.ini` and change the config values to your
-needs..
+Copy `/opt/c_locc/config.ini.sample` to `/opt/c_locc/config.ini` and change the config values to your
+needs.
 
 How To Run It
 -------------
