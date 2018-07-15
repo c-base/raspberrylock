@@ -9,11 +9,10 @@ from lmap import *
 
 import config
 
-
 def ldap_connect():
 	ld = ldap.ldap(config.LDAP.URI)
 	ld.simple_bind(config.LDAP.BINDDN, config.LDAP.BINDPW)
-	return lmap.lmap(dn=config.LDAP.BASE, ldap=ld)
+	return lmap.lmap(dn=config.LDAP.BASE, ldap=ld), ld
 
 
 def pwcheck(record, pw):
@@ -27,15 +26,17 @@ def pwcheck(record, pw):
 
 
 def authenticate(uid, pin):
-	lm = ldap_connect()
+	lm, ld = ldap_connect()
 	try:
 		user = lm(config.LDAP.USERBASE).search(config.LDAP.ACCESS_FILTER.format(uid))[0]
 		username = user[config.LDAP.UIDFIELD]
 		if pwcheck(user[config.LDAP.PINFIELD], pin):
 			print(datetime.now(), 'Valid combination for user "%s". Opening lock' % username)
+			ld.close()
 			return True
 	except Exception as e:
 		print(datetime.now(), 'Invalid user/pin:', uid, '('+str(e)+')')
+	ld.close()
 	return False
 
 
@@ -44,4 +45,3 @@ numbuf = []
 
 if __name__ == "__main__":
 	print(pwcheck('{SSHA}c8pLDYbSkF2jBAKxxa67nY7NYkdQXiPNFzzRso9FRZI=', '1234'))
-
