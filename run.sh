@@ -1,14 +1,10 @@
 #!/bin/bash
 
-# setup vars
-VIRTUAL_ENV="/opt/raspberrylock_env"
-INSTALL_DIR="/opt/raspberrylock"
-# end setup
+aplay /home/pi/raspberrylock/bootup.wav
 
-
-PATH="${VIRTUAL_ENV}/bin:$PATH"
-source ${VIRTUAL_ENV}/bin/activate
+export PATH="/root/.local/bin:$PATH"
 while true; do
-    ${VIRTUAL_ENV}/bin/python3 ${INSTALL_DIR}/schloss.py
+    /usr/bin/python3 /home/pi/raspberrylock/schloss.py --theme default
+#    /usr/bin/python3 /home/pi/raspberrylock/schloss.py --theme de
     echo "Restarting raspberrylock.."
 done

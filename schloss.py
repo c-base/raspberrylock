@@ -45,11 +45,16 @@ timeouts = {'1': BOUNCE_TIME, '2': BOUNCE_TIME, '3': BOUNCE_TIME, '4': BOUNCE_TI
 Q = Queue()
 LOCK = RLock()
 
+# ROWS and COLS for keyboard at HW lager
+# ROWS = [24, 3, 5, 7]
+# COLS = [15, 13, 11, 22]
+# OPEN_PIN = 26
+
+# Default ROWS, COLS and OPEN_PIN for all others
 ROWS = [11, 7, 5, 3]
 COLS = [16, 12, 10, 8]
-
-
 OPEN_PIN = 15
+
 
 PLAYER = 'aplay'
 
@@ -66,7 +71,7 @@ def next_theme():
     Look into themes folder and find all installed themes. Get a random one which is not the current one.
     """
     global THEME
-    themes = next(os.walk('/opt/raspberrylock/sounds/'))[1]
+    themes = next(os.walk('./themes/'))[1]
     OLD_THEME = THEME
     while THEME != OLD_THEME:
         THEME = random.choice(themes)
@@ -103,7 +108,7 @@ def decrease_timeouts(timeouts):
 
 def collect_measurements():
     """
-    """
+s    """
     pin_state = []
     for y_pin in ROWS:
         GPIO.output(y_pin, 1)
@@ -125,8 +130,9 @@ def read_keypad():
             return None
         else:
             num = random.randint(0, 9)
-            subprocess.Popen([PLAYER, '/opt/raspberrylock/sounds/%s/%s.wav' % (THEME, num)],
+            subprocess.Popen([PLAYER, './themes/%s/%s.wav' % (THEME, num)],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print(PLAYER, './themes/%s/%s.wav' % (THEME, num))
             timeouts[key] = BOUNCE_TIME
             return key
     else:
@@ -213,16 +219,16 @@ def control_loop():
 def open_if_correct(uid, pin):
     print('checking ldap ...')
     if authenticate(uid, pin):
-        subprocess.Popen([PLAYER, '/opt/raspberrylock/sounds/%s/success.wav' % THEME],
+        subprocess.Popen([PLAYER, './themes/%s/success.wav' % THEME],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         next_theme()
         with LOCK:
             GPIO.output(OPEN_PIN, 1)
             time.sleep(1)
             GPIO.output(OPEN_PIN, 0)
-            time.sleep(13)
+            time.sleep(8)
     else:
-        subprocess.Popen([PLAYER, '/opt/raspberrylock/sounds/%s/fail.wav' % THEME],
+        subprocess.Popen([PLAYER, './themes/%s/fail.wav' % THEME],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         with LOCK:
             time.sleep(2)
@@ -250,7 +256,7 @@ def main():
 if __name__ == '__main__':
     args = docopt(__doc__, version=__version__)
     try:
-        main()
         THEME = args['--theme']
+        main()
     except KeyboardInterrupt:
         GPIO.cleanup()
