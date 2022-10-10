@@ -38,3 +38,4 @@ nosetests.xml
 .idea
 
 .DS_Store
+*.BACKUP
