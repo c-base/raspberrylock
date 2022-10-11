@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 """
 c-lab schloss
@@ -15,23 +14,26 @@ Options:
   --theme=<theme>  Sound theme [default: default].
 """
 
+import asyncio
+import sys
 import os
 import time
 import random
 import subprocess
-from queue import Queue
-from threading import Thread, RLock
 
+import uvloop
+import gpiozero
 from docopt import docopt
-from RPi import GPIO
-
+from loguru import logger
 from ldap_interface import authenticate
 
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
-__version__ = '0.1.0'
+
+__version__ = '2.0.0'
 
 
-GPIO.setwarnings(False)
+# GPIO.setwarnings(False)
 
 NUMERIC_KEYS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
@@ -42,8 +44,8 @@ timeouts = {'1': BOUNCE_TIME, '2': BOUNCE_TIME, '3': BOUNCE_TIME, '4': BOUNCE_TI
             '9': BOUNCE_TIME, '0': BOUNCE_TIME, 'A': BOUNCE_TIME, 'B': BOUNCE_TIME,
             'C': BOUNCE_TIME, 'D': BOUNCE_TIME, 'E': BOUNCE_TIME, 'F': BOUNCE_TIME}
 
-Q = Queue()
-LOCK = RLock()
+Q = asyncio.queues.Queue()
+# LOCK = RLock()
 
 # ROWS and COLS for keyboard at HW lager
 # ROWS = [24, 3, 5, 7]
@@ -55,8 +57,11 @@ ROWS = [11, 7, 5, 3]
 COLS = [16, 12, 10, 8]
 OPEN_PIN = 15
 
+door_opener = None   # initialized by init_gpios()
+keyboard_rows = []
+keyboard_cols = []
 
-PLAYER = 'aplay'
+PLAYER = 'play'
 
 MONGO = None
 
@@ -78,13 +83,17 @@ def next_theme():
 
 
 def init_gpios():
-    GPIO.setmode(GPIO.BOARD)
-    GPIO.setup(OPEN_PIN, GPIO.OUT)
-    GPIO.output(OPEN_PIN, 0)
+    # GPIO.setmode(GPIO.BOARD)
+    # GPIO.setup(OPEN_PIN, GPIO.OUT)
+    door_opener = gpiozero.LED(OPEN_PIN,)
+    door_opener.off()
+
     for pin in ROWS:
-        GPIO.setup(pin, GPIO.OUT)
+        out_pin = gpiozero.DigitalOutputDevice(pin, )
+        keyboard_rows.append(out_pin)
     for pin in COLS:
-        GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+        in_pin = gpiozero.DigitalInputDevice(pin, pull_up=False)
+        keyboard_cols.append(in_pin)
 
 
 def decode_keypad(measurements):
@@ -108,16 +117,16 @@ def decrease_timeouts(timeouts):
 
 def collect_measurements():
     """
-s    """
+    """
     pin_state = []
-    for y_pin in ROWS:
-        GPIO.output(y_pin, 1)
+    for y_pin in keyboard_rows:
+        y_pin.on()
         x_pin_states = []
         for x_pin in COLS:
-            pin_in = GPIO.input(x_pin)
+            pin_in = x_pin.value()
             # print("{}x{} = {}".format(y_pin, x_pin, pin_in))
             x_pin_states.append(pin_in)
-        GPIO.output(y_pin, 0)
+        y_pin.off()
         pin_state.append(x_pin_states)
     return pin_state
 
@@ -142,13 +151,13 @@ def read_keypad():
 def reset_state():
     global STATE, UID, PIN
 
-    print("reset state")
+    logger.info("reset state")
     STATE = 0
     UID = ''
     PIN = ''
 
 
-def timeout_reset_state():
+async def timeout_reset_state():
     global RESET_TIMER
 
     while True:
@@ -156,10 +165,10 @@ def timeout_reset_state():
         if RESET_TIMER <= 0:
             reset_state()
             RESET_TIMER = STALE_TIMEOUT
-        time.sleep(1.0)
+        await asyncio.sleep(1.0)
 
 
-def control_loop():
+async def control_loop():
     global RESET_TIMER
     global STATE, UID, PIN
 
@@ -171,8 +180,8 @@ def control_loop():
     # The first and second 'A' presses are optional and ignored for compatibility with the replicator.
     # The second 'A' would be mandatory for a non-4-digit UID, luckily all c-base UIDs are 4-digit, though.
     while True:
-        key = Q.get()
-        print('state={}, got symbol {}'.format(STATE, '#'))
+        key = await Q.get()
+        logger.info('state={}, got symbol {}'.format(STATE, '#'))
         RESET_TIMER = STALE_TIMEOUT
         Q.task_done()
         if STATE == 0:
@@ -210,48 +219,49 @@ def control_loop():
                 reset_state()
                 continue
             elif key == 'A':
-                t = Thread(target=open_if_correct, args=(UID, PIN))
-                t.start()
+                loop = asyncio.get_running_loop()
+                # Start the LDAP check
+                open_if_correct(UID, PIN)
                 reset_state()
                 continue
 
 
 def open_if_correct(uid, pin):
-    print('checking ldap ...')
+    """
+    BLOCKING! Maybe this function needs to run in an executor thread.
+    """
+    logger.info('checking ldap ...')
     if authenticate(uid, pin):
         subprocess.Popen([PLAYER, './themes/%s/success.wav' % THEME],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         next_theme()
-        with LOCK:
-            GPIO.output(OPEN_PIN, 1)
-            time.sleep(1)
-            GPIO.output(OPEN_PIN, 0)
-            time.sleep(8)
+        door_opener.on()
+        time.sleep(1)
+        door_opener.off()
+        time.sleep(8)
+
     else:
         subprocess.Popen([PLAYER, './themes/%s/fail.wav' % THEME],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        with LOCK:
-            time.sleep(2)
+        time.sleep(2)
 
 
-def keypad_loop():
-    while True:
-        with LOCK:
-            key = read_keypad()
-            if key:
-                Q.put(key)
+async def keypad_loop():
+    loop = asyncio.get_running_loop()
+    while loop.is_running:
+        key = read_keypad()
+        if key:
+            Q.put(key)
 
 
 def main():
+    loop = asyncio.new_event_loop()
     # os.nice(10)
     init_gpios()
-    control_thread = Thread(target=control_loop)
-    control_thread.start()
-    keypad_thread = Thread(target=keypad_loop)
-    keypad_thread.start()
-    timeout_thread = Thread(target=timeout_reset_state)
-    timeout_thread.start()
-
+    control_thread = loop.create_task(control_loop())
+    keypad_thread =  loop.create_task(keypad_loop())
+    timeout_thread = loop.create_task(timeout_reset_state())
+    loop.run_forever()
 
 if __name__ == '__main__':
     args = docopt(__doc__, version=__version__)
@@ -259,4 +269,5 @@ if __name__ == '__main__':
         THEME = args['--theme']
         main()
     except KeyboardInterrupt:
-        GPIO.cleanup()
+        logger.info('Quitting')
+        
