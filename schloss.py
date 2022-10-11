@@ -269,5 +269,4 @@ if __name__ == '__main__':
         THEME = args['--theme']
         main()
     except KeyboardInterrupt:
-        logger.info('Quitting')
-        
+        logger.info('quitting')
