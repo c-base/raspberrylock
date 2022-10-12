@@ -24,11 +24,12 @@ import subprocess
 import uvloop
 import gpiozero
 from docopt import docopt
-from loguru import logger
 from ldap_interface import authenticate
 
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
+from sanic import Sanic
+from sanic.log import logger
+from sanic.response import text
 
 __version__ = '2.0.0'
 
@@ -69,6 +70,8 @@ STATE = 0
 UID = ''
 PIN = ''
 RESET_TIMER = STALE_TIMEOUT
+
+app = Sanic(__name__)
 
 
 def next_theme():
@@ -150,38 +153,40 @@ def read_keypad():
 
 def reset_state():
     global STATE, UID, PIN
-
-    logger.info("reset state")
+    logger.debug("reset state")
     STATE = 0
     UID = ''
     PIN = ''
 
 
+@app.add_task
 async def timeout_reset_state():
     global RESET_TIMER
-
-    while True:
+    loop = asyncio.get_running_loop()
+    while loop.is_running:
         RESET_TIMER -= 1
+        logger.debug("timeout in %d" % RESET_TIMER)
         if RESET_TIMER <= 0:
             reset_state()
             RESET_TIMER = STALE_TIMEOUT
         await asyncio.sleep(1.0)
 
 
+# @app.add_task
 async def control_loop():
     global RESET_TIMER
     global STATE, UID, PIN
-
-    reset_state()
+    await reset_state()
 
     # Main state machine.
     # Expects the user to enter her UID, then PIN like this:
     # [A] 2903 [A] 123456 A
     # The first and second 'A' presses are optional and ignored for compatibility with the replicator.
     # The second 'A' would be mandatory for a non-4-digit UID, luckily all c-base UIDs are 4-digit, though.
-    while True:
+    loop = asyncio.get_running_loop()
+    while loop.is_running:
         key = await Q.get()
-        logger.info('state={}, got symbol {}'.format(STATE, '#'))
+        print('state={}, got symbol {}'.format(STATE, '#'))
         RESET_TIMER = STALE_TIMEOUT
         Q.task_done()
         if STATE == 0:
@@ -230,7 +235,7 @@ def open_if_correct(uid, pin):
     """
     BLOCKING! Maybe this function needs to run in an executor thread.
     """
-    logger.info('checking ldap ...')
+    print('checking ldap ...')
     if authenticate(uid, pin):
         subprocess.Popen([PLAYER, './themes/%s/success.wav' % THEME],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -246,27 +251,27 @@ def open_if_correct(uid, pin):
         time.sleep(2)
 
 
+@app.add_task
 async def keypad_loop():
     loop = asyncio.get_running_loop()
     while loop.is_running:
         key = read_keypad()
         if key:
             Q.put(key)
+        await asyncio.sleep(0.1)
+    
+    
 
-
-def main():
-    loop = asyncio.new_event_loop()
-    # os.nice(10)
-    init_gpios()
-    control_thread = loop.create_task(control_loop())
-    keypad_thread =  loop.create_task(keypad_loop())
-    timeout_thread = loop.create_task(timeout_reset_state())
-    loop.run_forever()
+@app.get("/")
+async def hello_world(request):
+    return text(f"Next timeout in %d" % RESET_TIMER)
+    
 
 if __name__ == '__main__':
     args = docopt(__doc__, version=__version__)
     try:
         THEME = args['--theme']
-        main()
+        init_gpios()
+        app.run(host="0.0.0.0", port=8888, debug=True, access_log=True)
     except KeyboardInterrupt:
-        logger.info('quitting')
+        print('quitting')

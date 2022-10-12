@@ -7,6 +7,13 @@ matrix keypad. It then sends this data to a LDAP server to check if the
 entered user-id and passcode combination is correct. If the server answers with
 "correct", a door is opened by switching on an electric strike with a relais.
 
+How to kill it
+--------------
+
+```
+lsof -nP -iTCP -sTCP:LISTEN | grep 8888 | cut -w -f 2 | xargs kill -9
+```
+
 Installation
 --------------
 
