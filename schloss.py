@@ -38,7 +38,7 @@ __version__ = '2.0.0'
 
 NUMERIC_KEYS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
-BOUNCE_TIME = 10  # in milliseconds
+BOUNCE_TIME = 5  # in milliseconds
 STALE_TIMEOUT = 30  # in seconds
 timeouts = {'1': BOUNCE_TIME, '2': BOUNCE_TIME, '3': BOUNCE_TIME, '4': BOUNCE_TIME,
             '5': BOUNCE_TIME, '6': BOUNCE_TIME, '7': BOUNCE_TIME, '8': BOUNCE_TIME,
@@ -151,7 +151,6 @@ def read_keypad():
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             print(PLAYER, './themes/%s/%s.wav' % (THEME, num))
             timeouts[key] = BOUNCE_TIME
-            print("KEYYYYY %s" % key)
             return key
     else:
         return None
@@ -247,17 +246,23 @@ def open_if_correct(uid, pin):
     BLOCKING! Maybe this function needs to run in an executor thread.
     """
     print('checking ldap ...')
-    if authenticate(uid, pin):
-        subprocess.Popen([PLAYER, './themes/%s/success.wav' % THEME],
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        next_theme()
-        door_opener.on()
-        time.sleep(1)
-        door_opener.off()
-        time.sleep(8)
+    try:
+        if authenticate(uid, pin):
+            subprocess.Popen([PLAYER, './themes/%s/success.wav' % THEME],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            next_theme()
+            door_opener.on()
+            time.sleep(1)
+            door_opener.off()
+            time.sleep(8)
 
-    else:
-        subprocess.Popen([PLAYER, './themes/%s/fail.wav' % THEME],
+        else:
+            subprocess.Popen([PLAYER, './themes/%s/fail.wav' % THEME],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            time.sleep(2)
+    except Exception as error:
+        print(error)
+        subprocess.Popen([PLAYER, './themes/%s/error.wav' % THEME],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         time.sleep(2)
 
