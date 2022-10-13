@@ -38,7 +38,7 @@ __version__ = '2.0.0'
 
 NUMERIC_KEYS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
-BOUNCE_TIME = 5  # in milliseconds
+BOUNCE_TIME = 2  # in milliseconds
 STALE_TIMEOUT = 30  # in seconds
 timeouts = {'1': BOUNCE_TIME, '2': BOUNCE_TIME, '3': BOUNCE_TIME, '4': BOUNCE_TIME,
             '5': BOUNCE_TIME, '6': BOUNCE_TIME, '7': BOUNCE_TIME, '8': BOUNCE_TIME,
@@ -236,12 +236,12 @@ async def control_loop():
             elif key == 'A':
                 loop = asyncio.get_running_loop()
                 # Start the LDAP check
-                open_if_correct(UID, PIN)
+                await open_if_correct(UID, PIN)
                 reset_state()
                 continue
 
 
-def open_if_correct(uid, pin):
+async def open_if_correct(uid, pin):
     """
     BLOCKING! Maybe this function needs to run in an executor thread.
     """
@@ -252,19 +252,19 @@ def open_if_correct(uid, pin):
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             next_theme()
             door_opener.on()
-            time.sleep(1)
+            await asyncio.sleep(1)
             door_opener.off()
-            time.sleep(8)
+            await asyncio.sleep(8)
 
         else:
             subprocess.Popen([PLAYER, './themes/%s/fail.wav' % THEME],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            time.sleep(2)
+            await asyncio.sleep(2)
     except Exception as error:
         print(error)
         subprocess.Popen([PLAYER, './themes/%s/error.wav' % THEME],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        time.sleep(2)
+        await asyncio.sleep(2)
 
 
 @app.add_task
