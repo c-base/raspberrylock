@@ -21,16 +21,16 @@ Install the piface module with the Raspberry Pi configuration tool:
 ```
 sudo raspi-config (then follow the menu to Advanced -> SPI)
 
-sudo apt-get install python3.2 python3.2-dev build-essential
-sudo apt-get install libldap-2.4-2
+sudo apt-get install python3 python3-distutils python3-setuptools python3-dev libffi-dev libssl-dev rustc build-essential git
+curl -sSL https://install.python-poetry.org | python3 -
+git clone <repourl>
+cd <reponame>
+poetry install
+sudo apt install libldap-2.4-2
 sudo ln -s /usr/lib/arm-linux-gnueabihf/libldap_r-2.4.so.2 /usr/lib/arm-linux-gnueabihf/libldap.so
 sudo ldconfig
-sudo apt-get install python3-setuptools
-sudo apt-get install python3-pifacedigitalios
 
-git clone http://git.jaseg.net/python-lmap.git
-cd python-lmap
-python3 setup.py install
+
 ```
 
 Now clone this repository and change into its subdirectory.
